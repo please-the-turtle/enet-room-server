@@ -1,7 +1,9 @@
 package main
 
+import "github.com/please-the-turtle/enet-room-server/server"
+
 func main() {
-	config := DefaultServerConfig()
-	server := NewServer(config)
-	server.Listen()
+	config := server.DefaultServerConfig()
+	s := server.NewServer(config)
+	s.Listen()
 }

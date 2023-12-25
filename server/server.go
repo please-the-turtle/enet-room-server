@@ -1,10 +1,12 @@
-package main
+package server
 
 import (
 	"strings"
 	"sync"
 
 	"github.com/codecat/go-enet"
+
+	"github.com/please-the-turtle/enet-room-server/logging"
 )
 
 const (
@@ -22,11 +24,11 @@ const (
 
 var (
 	wg      sync.WaitGroup
-	loggers *Loggers
+	loggers *logging.Loggers
 )
 
 func init() {
-	loggers = NewLoggers()
+	loggers = logging.NewLoggers()
 }
 
 // Server configuration data.
