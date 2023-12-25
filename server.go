@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"strings"
 	"sync"
 
@@ -21,7 +20,14 @@ const (
 	NOT_A_COMMAND_NOTICE          = ERROR_NOTICE_PREFIX + "Command not exists\n"
 )
 
-var wg sync.WaitGroup
+var (
+	wg      sync.WaitGroup
+	loggers *Loggers
+)
+
+func init() {
+	loggers = NewLoggers()
+}
 
 // Server configuration data.
 // MaxClients store the maximum number of clients served.
@@ -87,7 +93,7 @@ func (s *Server) Join(c *Client) {
 	c.Listen()
 	c.outgoing <- NewMessage(c, string(c.id)+"\n")
 
-	log.Println("New client joined on server")
+	loggers.Info("New client joined on server")
 }
 
 // Disconnects client from server.
@@ -98,6 +104,7 @@ func (s *Server) Disconnect(c *Client) {
 }
 
 func (s *Server) Listen() {
+	loggers.Info("Server started on port", s.config.Port)
 	wg.Add(1)
 	go s.listen()
 	go func() {
@@ -125,14 +132,14 @@ func (s *Server) Parse(m *Message) {
 
 	if !prs {
 		m.sender.outgoing <- NewMessage(m.sender, NOT_A_COMMAND_NOTICE)
-		log.Printf("ERROR: Message handler: HandlePrefix %s incorrect.", handlerPrefix)
+		loggers.Errorf("HandlePrefix '%s' incorrect.", handlerPrefix)
 		return
 	}
 
 	err := handler.handle(m)
 	if err != nil {
 		m.sender.outgoing <- NewMessage(m.sender, ERROR_NOTICE_PREFIX+err.Error())
-		log.Println("ERROR: Message handler:", err)
+		loggers.Error(err)
 	}
 }
 
@@ -143,7 +150,7 @@ func (s *Server) Send(m *Message) {
 	}
 
 	if m.sender.room == nil {
-		log.Println("ERROR: Message not sent: Client not in the room")
+		loggers.Error("Message not sent: Client not in the room")
 		return
 	}
 
@@ -153,19 +160,19 @@ func (s *Server) Send(m *Message) {
 func (s *Server) CreateRoom(c *Client, roomCapacity int) {
 	if c.room != nil {
 		c.outgoing <- NewMessage(c, CLIENT_ALREADY_IN_ROOM_NOTICE)
-		log.Printf("ERROR: Creating a room: Client already in another room")
+		loggers.Error("Creating a room: Client already in another room")
 		return
 	}
 
 	room := NewRoom(roomCapacity)
 	if s.rooms[room.id] != nil {
 		c.outgoing <- NewMessage(c, CREATING_ROOM_FAILED_NOTICE)
-		log.Printf("ERROR: Creating room with id %s failed", room.id)
+		loggers.Errorf("Creating room with id %s failed", room.id)
 		return
 	}
 
 	s.rooms[room.id] = room
-	log.Printf("New room with id %s created", room.id)
+	loggers.Infof("New room with id %s created", room.id)
 	room.Join(c)
 
 	c.outgoing <- NewMessage(c, string(c.room.id)+"\n")
@@ -176,13 +183,13 @@ func (s *Server) JoinRoom(c *Client, roomID RoomID) {
 
 	if !prs {
 		c.outgoing <- NewMessage(c, ROOM_NOT_EXISTS_NOTICE)
-		log.Printf("ERROR: Joining to the room: Room with id %s not exists\n", roomID)
+		loggers.Errorf("Joining to the room: Room with id %s not exists\n", roomID)
 		return
 	}
 
 	if c.room != nil {
 		c.outgoing <- NewMessage(c, CLIENT_ALREADY_IN_ROOM_NOTICE)
-		log.Printf("ERROR: Joining to the room: Client already in another room")
+		loggers.Errorf("ERROR: Joining to the room: Client already in another room")
 		return
 	}
 
@@ -193,7 +200,7 @@ func (s *Server) JoinRoom(c *Client, roomID RoomID) {
 	}
 
 	c.outgoing <- NewMessage(c, "JOINED\n")
-	log.Printf("Client %s joined to the room %s\n", c.id, room.id)
+	loggers.Infof("Client %s joined to the room %s\n", c.id, room.id)
 }
 
 func (s *Server) LeaveRoom(c *Client) {
@@ -204,7 +211,7 @@ func (s *Server) LeaveRoom(c *Client) {
 	}
 
 	room.Leave(c)
-	log.Printf("Client with id %s left room %s", c.id, room.id)
+	loggers.Infof("Client with id %s left room %s", c.id, room.id)
 	c.outgoing <- NewMessage(c, "LEFT\n")
 	if len(room.members) == 0 {
 		s.DeleteRoom(room)
@@ -212,7 +219,7 @@ func (s *Server) LeaveRoom(c *Client) {
 }
 
 func (s *Server) DeleteRoom(r *Room) {
-	log.Printf("Room with id %s deleted.", r.id)
+	loggers.Infof("Room with id %s deleted.", r.id)
 	delete(s.rooms, r.id)
 }
 
@@ -224,7 +231,7 @@ func (s *Server) listen() {
 
 	host, err := enet.NewHost(enet.NewListenAddress(s.config.Port), uint64(s.config.MaxClients), 0, 0, 0)
 	if err != nil {
-		log.Printf("Couldn't create host: %s", err.Error())
+		loggers.Error("Couldn't create host: ", err.Error())
 		return
 	}
 	defer host.Destroy()
@@ -243,7 +250,7 @@ func (s *Server) listen() {
 		case enet.EventDisconnect:
 			client, prs := s.clients[event.GetPeer()]
 			if !prs {
-				log.Printf("eventdisconnect: client not present.")
+				loggers.Warning("ENet EventDisconnect: client not present.")
 				continue
 			}
 			s.Disconnect(client)
@@ -251,14 +258,14 @@ func (s *Server) listen() {
 		case enet.EventReceive:
 			client, prs := s.clients[event.GetPeer()]
 			if !prs {
-				log.Printf("eventdisconnect: client not present.")
+				loggers.Warning("ENet EventRecieve: client not present.")
 				continue
 			}
 			packet := event.GetPacket()
 			data := packet.GetData()
 			defer packet.Destroy()
 			defer func() {
-				log.Println("DEFERRED CALL INSIDE SWITCH")
+				loggers.Info("DEFERRED CALL INSIDE SWITCH")
 			}()
 			text := string(data)
 

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"log"
 	"math/rand"
 	"time"
 
@@ -47,7 +46,7 @@ func (c *Client) Listen() {
 
 func (c *Client) Quit() {
 	c.peer.Disconnect(0)
-	log.Printf("The client %s has left the server", c.id)
+	loggers.Infof("The client %s has left the server", c.id)
 }
 
 // Writes data to the client connection.
@@ -55,7 +54,7 @@ func (c *Client) writeLoop() {
 	for message := range c.outgoing {
 		err := c.peer.SendString(message.text, message.channel, message.packetFlags)
 		if err != nil {
-			log.Println("Sending string:", err.Error())
+			loggers.Error("Sending string:", err.Error())
 		}
 	}
 }

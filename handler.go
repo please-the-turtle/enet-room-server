@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"log"
 	"math"
 	"strconv"
 	"strings"
@@ -28,25 +27,22 @@ func NewCreateRoomHandler(s *Server) *CreateRoomHandler {
 }
 
 func (h *CreateRoomHandler) handle(m *Message) error {
-	log.Println(m.text)
 	room_capacity := math.MaxInt64
 	mess_parts := strings.Split(m.text, " ")
 	if len(mess_parts) > 2 {
-		return errors.New("Incorrect command format")
+		return errors.New("Invalid command format")
 	}
 
 	if len(mess_parts) > 1 {
 		capacity_str := mess_parts[1]
 		capacity_param, err := strconv.Atoi(capacity_str)
 		if err != nil {
-			return errors.New("Incorrect command format")
+			return errors.New("Invalid command format")
 		}
 		if capacity_param > 0 {
 			room_capacity = capacity_param
 		}
-		log.Println(mess_parts)
 	}
-	log.Println(room_capacity)
 
 	creator := m.sender
 	h.server.CreateRoom(creator, room_capacity)
