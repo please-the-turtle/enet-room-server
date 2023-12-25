@@ -261,18 +261,16 @@ func (s *Server) listen() {
 				loggers.Warning("ENet EventRecieve: client not present.")
 				continue
 			}
+
 			packet := event.GetPacket()
 			data := packet.GetData()
-			defer packet.Destroy()
-			defer func() {
-				loggers.Info("DEFERRED CALL INSIDE SWITCH")
-			}()
 			text := string(data)
-
 			message := NewMessage(client, text)
 			message.channel = event.GetChannelID()
 			message.packetFlags = packet.GetFlags()
 			s.incoming <- message
+
+			packet.Destroy()
 		}
 	}
 }
