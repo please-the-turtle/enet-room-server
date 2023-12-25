@@ -11,8 +11,6 @@ const (
 	ROOM_ID_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 	ROOM_ID_LENGHT   = 6
 
-	NOTICE_TYPE = "tcp"
-
 	CLIENT_JOINED_NOTICE = "JOINED"
 	CLIENT_LEFT_NOTICE   = "LEFT"
 )
@@ -20,28 +18,28 @@ const (
 // Unique room id.
 type RoomID string
 
-// Room is used to send messages between its members.
-type Room struct {
+// room is used to send messages between its members.
+type room struct {
 	id       RoomID
 	capacity int
-	members  map[ClientID]*Client
+	members  map[ClientID]*client
 }
 
 // Creates new empty room.
-func NewRoom(capacity int) *Room {
+func NewRoom(capacity int) *room {
 	if capacity < 1 {
 		capacity = math.MaxInt64
 	}
 	id := genRoomID()
-	return &Room{
+	return &room{
 		id:       id,
-		members:  make(map[ClientID]*Client),
+		members:  make(map[ClientID]*client),
 		capacity: capacity,
 	}
 }
 
 // Adds new member to the room.
-func (r *Room) Join(c *Client) error {
+func (r *room) join(c *client) error {
 	if len(r.members) >= r.capacity {
 		return errors.New("ERR: Room is full")
 	}
@@ -49,15 +47,15 @@ func (r *Room) Join(c *Client) error {
 	c.room = r
 	r.members[c.id] = c
 	joinedMessage := NewMessage(c, CLIENT_JOINED_NOTICE)
-	r.Broadcast(joinedMessage)
+	r.broadcast(joinedMessage)
 
 	return nil
 }
 
 // Removes member from room.
-func (r *Room) Leave(c *Client) {
+func (r *room) leave(c *client) {
 	m := NewMessage(c, CLIENT_LEFT_NOTICE)
-	r.Broadcast(m)
+	r.broadcast(m)
 
 	delete(r.members, c.id)
 
@@ -65,7 +63,7 @@ func (r *Room) Leave(c *Client) {
 }
 
 // Sends messages to all participants in the room except the sender.
-func (r *Room) Broadcast(m *Message) {
+func (r *room) broadcast(m *Message) {
 	for _, member := range r.members {
 		if member != m.sender {
 			member.outgoing <- m

@@ -10,9 +10,6 @@ import (
 )
 
 const (
-	UDP_BUFFER_SIZE_BYTES = 256
-	TCP_BUFFER_SIZE_BYTES = 256
-
 	ERROR_NOTICE_PREFIX = "ERR: "
 
 	SERVER_FULL_NOTICE            = ERROR_NOTICE_PREFIX + "The server is full\n"
@@ -53,8 +50,8 @@ func DefaultServerConfig() *ServerConfig {
 // between clients inside one room.
 type Server struct {
 	config   *ServerConfig
-	rooms    map[RoomID]*Room
-	clients  map[enet.Peer]*Client
+	rooms    map[RoomID]*room
+	clients  map[enet.Peer]*client
 	handlers map[HandlerPrefix]Handler
 	incoming chan *Message
 }
@@ -63,8 +60,8 @@ type Server struct {
 func NewServer(config *ServerConfig) *Server {
 	s := &Server{
 		config:   config,
-		rooms:    make(map[RoomID]*Room),
-		clients:  make(map[enet.Peer]*Client),
+		rooms:    make(map[RoomID]*room),
+		clients:  make(map[enet.Peer]*client),
 		handlers: make(map[HandlerPrefix]Handler),
 		incoming: make(chan *Message),
 	}
@@ -77,10 +74,10 @@ func NewServer(config *ServerConfig) *Server {
 }
 
 // Adds new client to the server.
-func (s *Server) Join(c *Client) {
+func (s *Server) Join(c *client) {
 	if len(s.clients) >= s.config.MaxClients {
 		c.peer.SendString(SERVER_FULL_NOTICE, 0, enet.PacketFlagReliable)
-		c.Quit()
+		c.quit()
 		return
 	}
 
@@ -92,15 +89,15 @@ func (s *Server) Join(c *Client) {
 		s.Disconnect(c)
 	}()
 
-	c.Listen()
+	c.listen()
 	c.outgoing <- NewMessage(c, string(c.id)+"\n")
 
 	loggers.Info("New client joined on server")
 }
 
 // Disconnects client from server.
-func (s *Server) Disconnect(c *Client) {
-	c.Quit()
+func (s *Server) Disconnect(c *client) {
+	c.quit()
 	s.LeaveRoom(c)
 	delete(s.clients, c.peer)
 }
@@ -112,7 +109,7 @@ func (s *Server) Listen() {
 	go func() {
 		for {
 			message := <-s.incoming
-			s.Parse(message)
+			s.parse(message)
 		}
 	}()
 	wg.Wait()
@@ -121,7 +118,7 @@ func (s *Server) Listen() {
 // Parses the message for processing.
 // If the message text begins with a command symbol,
 // then it tries to select the appropriate handler in accordance with HandlerPrefix.
-func (s *Server) Parse(m *Message) {
+func (s *Server) parse(m *Message) {
 	if !strings.HasPrefix(m.text, s.config.CommandPrefix) {
 		s.Send(m)
 		return
@@ -156,10 +153,10 @@ func (s *Server) Send(m *Message) {
 		return
 	}
 
-	m.sender.room.Broadcast(m)
+	m.sender.room.broadcast(m)
 }
 
-func (s *Server) CreateRoom(c *Client, roomCapacity int) {
+func (s *Server) CreateRoom(c *client, roomCapacity int) {
 	if c.room != nil {
 		c.outgoing <- NewMessage(c, CLIENT_ALREADY_IN_ROOM_NOTICE)
 		loggers.Error("Creating a room: Client already in another room")
@@ -175,12 +172,12 @@ func (s *Server) CreateRoom(c *Client, roomCapacity int) {
 
 	s.rooms[room.id] = room
 	loggers.Infof("New room with id %s created", room.id)
-	room.Join(c)
+	room.join(c)
 
 	c.outgoing <- NewMessage(c, string(c.room.id)+"\n")
 }
 
-func (s *Server) JoinRoom(c *Client, roomID RoomID) {
+func (s *Server) JoinRoom(c *client, roomID RoomID) {
 	room, prs := s.rooms[roomID]
 
 	if !prs {
@@ -195,7 +192,7 @@ func (s *Server) JoinRoom(c *Client, roomID RoomID) {
 		return
 	}
 
-	err := room.Join(c)
+	err := room.join(c)
 	if err != nil {
 		c.outgoing <- NewMessage(c, err.Error())
 		return
@@ -205,14 +202,14 @@ func (s *Server) JoinRoom(c *Client, roomID RoomID) {
 	loggers.Infof("Client %s joined to the room %s\n", c.id, room.id)
 }
 
-func (s *Server) LeaveRoom(c *Client) {
+func (s *Server) LeaveRoom(c *client) {
 	room := c.room
 
 	if room == nil {
 		return
 	}
 
-	room.Leave(c)
+	room.leave(c)
 	loggers.Infof("Client with id %s left room %s", c.id, room.id)
 	c.outgoing <- NewMessage(c, "LEFT\n")
 	if len(room.members) == 0 {
@@ -220,7 +217,7 @@ func (s *Server) LeaveRoom(c *Client) {
 	}
 }
 
-func (s *Server) DeleteRoom(r *Room) {
+func (s *Server) DeleteRoom(r *room) {
 	loggers.Infof("Room with id %s deleted.", r.id)
 	delete(s.rooms, r.id)
 }

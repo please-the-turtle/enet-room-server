@@ -15,20 +15,20 @@ const (
 // Unique client id.
 type ClientID string
 
-// Client implements the interaction of a separate client connected to the server.
-type Client struct {
+// client implements the interaction of a separate client connected to the server.
+type client struct {
 	id       ClientID
-	room     *Room
+	room     *room
 	incoming chan *Message
 	outgoing chan *Message
 	peer     enet.Peer
 }
 
 // Creates new client.
-func NewClient(peer enet.Peer) *Client {
+func NewClient(peer enet.Peer) *client {
 	id := genClientID()
 
-	client := &Client{
+	client := &client{
 		id:       id,
 		room:     nil,
 		incoming: make(chan *Message),
@@ -40,17 +40,17 @@ func NewClient(peer enet.Peer) *Client {
 }
 
 // Starts read and write data from client connection.
-func (c *Client) Listen() {
+func (c *client) listen() {
 	go c.writeLoop()
 }
 
-func (c *Client) Quit() {
+func (c *client) quit() {
 	c.peer.Disconnect(0)
 	loggers.Infof("The client %s has left the server", c.id)
 }
 
 // Writes data to the client connection.
-func (c *Client) writeLoop() {
+func (c *client) writeLoop() {
 	for message := range c.outgoing {
 		err := c.peer.SendString(message.text, message.channel, message.packetFlags)
 		if err != nil {

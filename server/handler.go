@@ -9,24 +9,26 @@ import (
 
 type HandlerPrefix string
 
+// Used for handling server commands
 type Handler interface {
 	handle(m *Message) error
 }
 
 // Calls when client wants to create new room.
-type CreateRoomHandler struct {
+type createRoomHandler struct {
 	server *Server
 }
 
-func NewCreateRoomHandler(s *Server) *CreateRoomHandler {
-	h := &CreateRoomHandler{
+// Creates a new server command handler that calls when client wants to create new room.
+func NewCreateRoomHandler(s *Server) *createRoomHandler {
+	h := &createRoomHandler{
 		server: s,
 	}
 
 	return h
 }
 
-func (h *CreateRoomHandler) handle(m *Message) error {
+func (h *createRoomHandler) handle(m *Message) error {
 	room_capacity := math.MaxInt64
 	mess_parts := strings.Split(m.text, " ")
 	if len(mess_parts) > 2 {
@@ -51,19 +53,20 @@ func (h *CreateRoomHandler) handle(m *Message) error {
 }
 
 // Calls when client wants to join to existing room by RoomID.
-type JoinRoomHandler struct {
+type joinRoomHandler struct {
 	server *Server
 }
 
-func NewJoinRoomHandler(s *Server) *JoinRoomHandler {
-	h := &JoinRoomHandler{
+// Creates a new server command handler that calls when client wants to join to existing room by RoomID.
+func NewJoinRoomHandler(s *Server) *joinRoomHandler {
+	h := &joinRoomHandler{
 		server: s,
 	}
 
 	return h
 }
 
-func (h *JoinRoomHandler) handle(m *Message) error {
+func (h *joinRoomHandler) handle(m *Message) error {
 	client := m.sender
 	args := strings.Split(m.text, " ")[1:]
 
@@ -77,19 +80,21 @@ func (h *JoinRoomHandler) handle(m *Message) error {
 	return nil
 }
 
-type LeaveRoomHandler struct {
+// Calls when client wants to leave the room.
+type leaveRoomHandler struct {
 	server *Server
 }
 
-func NewLeaveRoomHandler(s *Server) *LeaveRoomHandler {
-	h := &LeaveRoomHandler{
+// Creates a new server command handler that calls when client wants to leave the room.
+func NewLeaveRoomHandler(s *Server) *leaveRoomHandler {
+	h := &leaveRoomHandler{
 		server: s,
 	}
 
 	return h
 }
 
-func (h *LeaveRoomHandler) handle(m *Message) error {
+func (h *leaveRoomHandler) handle(m *Message) error {
 	h.server.LeaveRoom(m.sender)
 
 	return nil

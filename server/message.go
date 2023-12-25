@@ -6,12 +6,12 @@ import (
 
 type Message struct {
 	text        string
-	sender      *Client
+	sender      *client
 	channel     uint8
 	packetFlags enet.PacketFlags
 }
 
-func NewMessage(sender *Client, text string) *Message {
+func NewMessage(sender *client, text string) *Message {
 	return &Message{
 		sender:      sender,
 		text:        text,
@@ -20,7 +20,7 @@ func NewMessage(sender *Client, text string) *Message {
 	}
 }
 
-func NewMessageUnreliable(sender *Client, text string) *Message {
+func NewMessageUnreliable(sender *client, text string) *Message {
 	return &Message{
 		sender:      sender,
 		text:        text,
