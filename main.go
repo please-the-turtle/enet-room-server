@@ -1,6 +1,8 @@
 package main
 
-import "github.com/please-the-turtle/enet-room-server/server"
+import (
+	"github.com/please-the-turtle/enet-room-server/server"
+)
 
 func main() {
 	config := server.DefaultServerConfig()

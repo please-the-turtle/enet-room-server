@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/codecat/go-enet"
+
+	"github.com/please-the-turtle/enet-room-server/logging"
 )
 
 const (
@@ -46,7 +48,7 @@ func (c *client) listen() {
 
 func (c *client) quit() {
 	c.peer.Disconnect(0)
-	loggers.Infof("The client %s has left the server", c.id)
+	logging.Infof("The client %s has left the server", c.id)
 }
 
 // Writes data to the client connection.
@@ -54,7 +56,7 @@ func (c *client) writeLoop() {
 	for message := range c.outgoing {
 		err := c.peer.SendString(message.text, message.channel, message.packetFlags)
 		if err != nil {
-			loggers.Error("Sending string:", err.Error())
+			logging.Error("Sending string:", err.Error())
 		}
 	}
 }
