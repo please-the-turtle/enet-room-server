@@ -2,6 +2,7 @@ package server
 
 import (
 	"errors"
+	"fmt"
 	"math"
 	"math/rand"
 	"time"
@@ -64,6 +65,7 @@ func (r *room) leave(c *client) {
 
 // Sends messages to all participants in the room except the sender.
 func (r *room) broadcast(m *Message) {
+	m.text = fmt.Sprintf("%s: %s", m.sender.id, m.text)
 	for _, member := range r.members {
 		if member != m.sender {
 			member.outgoing <- m

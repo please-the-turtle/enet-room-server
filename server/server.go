@@ -90,7 +90,7 @@ func (s *Server) Join(c *client) {
 	}()
 
 	c.listen()
-	c.outgoing <- NewMessage(c, string(c.id)+"\n")
+	c.outgoing <- NewMessage(c, string(c.id))
 
 	loggers.Info("New client joined on server")
 }
@@ -174,7 +174,7 @@ func (s *Server) CreateRoom(c *client, roomCapacity int) {
 	loggers.Infof("New room with id %s created", room.id)
 	room.join(c)
 
-	c.outgoing <- NewMessage(c, string(c.room.id)+"\n")
+	c.outgoing <- NewMessage(c, string(c.room.id))
 }
 
 func (s *Server) JoinRoom(c *client, roomID RoomID) {
@@ -182,7 +182,7 @@ func (s *Server) JoinRoom(c *client, roomID RoomID) {
 
 	if !prs {
 		c.outgoing <- NewMessage(c, ROOM_NOT_EXISTS_NOTICE)
-		loggers.Errorf("Joining to the room: Room with id %s not exists\n", roomID)
+		loggers.Errorf("Joining to the room: Room with id %s not exists", roomID)
 		return
 	}
 
@@ -198,8 +198,8 @@ func (s *Server) JoinRoom(c *client, roomID RoomID) {
 		return
 	}
 
-	c.outgoing <- NewMessage(c, "JOINED\n")
-	loggers.Infof("Client %s joined to the room %s\n", c.id, room.id)
+	c.outgoing <- NewMessage(c, "JOINED")
+	loggers.Infof("Client %s joined to the room %s", c.id, room.id)
 }
 
 func (s *Server) LeaveRoom(c *client) {
@@ -211,7 +211,7 @@ func (s *Server) LeaveRoom(c *client) {
 
 	room.leave(c)
 	loggers.Infof("Client with id %s left room %s", c.id, room.id)
-	c.outgoing <- NewMessage(c, "LEFT\n")
+	c.outgoing <- NewMessage(c, "LEFT")
 	if len(room.members) == 0 {
 		s.DeleteRoom(room)
 	}
@@ -236,7 +236,7 @@ func (s *Server) listen() {
 	defer host.Destroy()
 
 	for {
-		event := host.Service(1000)
+		event := host.Service(0)
 
 		switch event.GetType() {
 		case enet.EventNone:
